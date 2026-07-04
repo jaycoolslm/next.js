@@ -8,7 +8,7 @@ create table public.tripwire_alerts (
   user_id         uuid not null references auth.users(id) on delete cascade,
   org_id          uuid not null references public.organizations(id) on delete cascade,
   deal_id         uuid references public.deals(id) on delete set null,
-  level           text not null check (level in ('info','warning','red')),
+  level           text not null check (level in ('amber','red','qard_info')),
   message         text not null,
   acknowledged_at timestamptz,
   created_at      timestamptz not null default now()

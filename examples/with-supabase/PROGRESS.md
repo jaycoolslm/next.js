@@ -11,8 +11,22 @@
 | 4 | Witness ceremony + snapshotting + attestations | done (Subagent E) |
 | 5 | Repayments + settlement + dashboard | done (Subagent E) |
 | 6 | Contract pack + content (Subagent B) | done |
-| 7 | Adversarial review (Subagent C) | in progress |
-| 8 | README / ARCHITECTURE rewrite, final PROGRESS | drafted |
+| 7 | Adversarial review (Subagent C) | done — 1 High fixed, firewall + ledger verified; docs/SECURITY-REVIEW.md |
+| 8 | README / ARCHITECTURE rewrite, final PROGRESS | done |
+
+## Security review outcome (Phase 7)
+
+- **High (fixed):** `tripwire_alerts.level` CHECK used stale values
+  (`info/warning/red`) while the app emits `amber/red/qard_info`, so the amber
+  tripwire acknowledgement — the key compliance feature — would raise and
+  never log. Constraint corrected in the migration.
+- **Low (accepted):** a purchase receipt may be uploaded during any pre-active
+  status, so its event can precede the promise event; the state sequence
+  itself is still strictly enforced.
+- Firewall (participant-only RLS + storage), ledger immutability (revokes +
+  triggers + service-role-proof), state machine, witness integrity, tripwire,
+  invitation/auth, money invariants, and contract-render escaping all verified
+  sound. Full report: docs/SECURITY-REVIEW.md.
 
 ## Integration status
 
