@@ -5,7 +5,7 @@
 | Phase | Description | Status |
 | ----- | ----------- | ------ |
 | 0 | Bootstrap: install, supabase init, env wiring | done |
-| 1 | Migrations (Subagent A) + RLS/hash-chain tests | in progress (A running; tests written) |
+| 1 | Migrations (Subagent A) + RLS/hash-chain tests | done — validated on live PG16 (full RPC-only lifecycles, chain re-verification, guard checks) |
 | 2 | Invitations + orgs + roles UI | in progress (Subagent D) |
 | 3 | Deal wizard, advance_deal, routing + tripwire | in progress (routing lib + actions done; wizard UI with Subagent E) |
 | 4 | Witness ceremony + snapshotting + attestations | in progress (actions + snapshot done; ceremony UI with Subagent E) |
@@ -22,6 +22,17 @@
 - **New server-only env var**: `SUPABASE_SECRET_KEY` (service role) — required for invitation-gated account creation and contract snapshot writes. Documented in README; available from `supabase start` output locally.
 - **Standalone installs**: this example is not a pnpm workspace package; use `pnpm install --ignore-workspace` inside the directory (documented in README).
 - Starter conventions preserved: `@supabase/ssr` clients in `lib/supabase/`, proxy session refresh, shadcn/ui, Tailwind.
+
+## Notable deviations (see also docs/RLS.md)
+
+- RLS is enabled but not FORCEd: the definer-RPC architecture requires the
+  function owner to bypass RLS for ledger appends and policy helpers.
+- `org_governance_deals` is a SECURITY DEFINER function (`get_governance_deals`)
+  rather than a view — a plain view cannot expose metadata to non-participant
+  admins under the participant-only RLS.
+- Seed inserts directly into auth.users/auth.identities with the common GoTrue
+  column set; a future GoTrue version adding NOT NULL columns may need the seed
+  updated.
 
 ## Open questions
 
