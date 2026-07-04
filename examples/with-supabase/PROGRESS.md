@@ -6,13 +6,25 @@
 | ----- | ----------- | ------ |
 | 0 | Bootstrap: install, supabase init, env wiring | done |
 | 1 | Migrations (Subagent A) + RLS/hash-chain tests | done — validated on live PG16 (full RPC-only lifecycles, chain re-verification, guard checks) |
-| 2 | Invitations + orgs + roles UI | in progress (Subagent D) |
-| 3 | Deal wizard, advance_deal, routing + tripwire | in progress (routing lib + actions done; wizard UI with Subagent E) |
-| 4 | Witness ceremony + snapshotting + attestations | in progress (actions + snapshot done; ceremony UI with Subagent E) |
-| 5 | Repayments + settlement + dashboard | in progress (actions/queries done; UI with Subagent E) |
-| 6 | Contract pack + content (Subagent B) | content done; renderer + route done |
-| 7 | Adversarial review (Subagent C) | pending |
+| 2 | Invitations + orgs + roles UI | done (Subagent D) |
+| 3 | Deal wizard, advance_deal, routing + tripwire | done (Subagent E) |
+| 4 | Witness ceremony + snapshotting + attestations | done (Subagent E) |
+| 5 | Repayments + settlement + dashboard | done (Subagent E) |
+| 6 | Contract pack + content (Subagent B) | done |
+| 7 | Adversarial review (Subagent C) | in progress |
 | 8 | README / ARCHITECTURE rewrite, final PROGRESS | drafted |
+
+## Integration status
+
+- `pnpm exec tsc --noEmit`: clean.
+- `pnpm exec eslint .`: clean (ignores .next/, node_modules/, supabase/).
+- `pnpm test` (unit): 25 passing (routing, state machine, chain verifier).
+- `NODE_ENV=production pnpm build`: succeeds; all data-driven routes are
+  Partial Prerender (uncached auth/cookie access wrapped in Suspense per
+  cacheComponents). Dynamic: /deals/[id]/contract, /auth/confirm.
+- Integration tests (RLS/chain) are written; they require a live
+  `supabase start` (Docker unavailable in this build container) and skip
+  cleanly otherwise.
 
 ## Decisions
 
