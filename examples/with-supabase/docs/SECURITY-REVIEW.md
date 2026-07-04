@@ -188,3 +188,42 @@ strictly enforced by `advance_deal` (a deal cannot reach `active` out of
 order), so this only means an early-staged receipt's timestamp is not forced to
 fall after the promise. This is arguably intended (parties may stage a receipt
 early) and is recorded for awareness rather than fixed.
+
+---
+
+# Addendum — Subagent C (independent pass)
+
+This pass confirms every SAFE verdict above and confirms the F1 tripwire CHECK
+fix is present in the tree (`20260704000008_tripwire_views.sql:11` now reads
+`check (level in ('amber','red','qard_info'))`). It adds the following findings
+that the primary review did not record. No further code was changed by
+Subagent C (all items below are either not safely auto-fixable or are
+design-level); they are filed for triage.
+
+| ID | Severity | Surface | Summary |
+| --- | --- | --- | --- |
+| C-1 | Medium | 5 Witness | OTP is enforced only in the server action. `attest_deal` is granted to `authenticated` (`grants.sql:53`) and stamps `otp_verified_at = now()` **unconditionally** (`rpcs.sql:219`). An invited witness who calls the RPC directly — bypassing `attestDealAction`'s `verifyOtp` (`witness.ts:62-69`) — attests with **no OTP**, and the row falsely records `otp_verified_at`. Actor is still a genuine invited non-party witness, so this weakens live-mailbox proof rather than breaking the ceremony. Not trivially fixable in-DB (OTP is a Supabase-auth concept). |
+| C-2 | Low-Med | 3/5 Snapshot | `advance_deal`/`begin_witnessing` trusts the client-supplied `snapshot_sha256` and `snapshot_path` (`state_machine.sql:139-150`); the DB cannot recompute the rendered-HTML hash. Mitigated because only the service role can write to the `contract-snapshots` bucket (`storage.sql:30-38`), so a party calling the RPC directly can at most point at an existing service-written snapshot, not inject arbitrary HTML. |
+| C-3 | Low | 1 Privacy | `get_financier_deal_count(type, user_id)` (`tripwire_views.sql:58-103`) lets **any** co-member (`shares_org_with`) read another member's aggregate financier deal counts / regulatory breakdown — not just a deal counterparty during creation. Counts only; no amounts or deal identities leak. |
+| C-4 | Low | 6 Tripwire | When the **customer** creates the deal, `acknowledge_tripwire` records the acknowledgement against the customer (`auth.uid()`), not the financier whose activity triggered it (`deals.ts:210-217`). Deal is still gated; §6 intends the financier to acknowledge. |
+| C-5 | Low | — functional | `create_deal`'s INSERT omits `arbitrator_name`/`arbitrator_contact` (`rpcs.sql:61-73`), although `createDealAction` passes them (`deals.ts:203-204`). An arbitrator nominated at creation is silently dropped. Non-security, but affects the arbitration rail / contract pack. |
+
+Concurrences with the primary review: surfaces 1, 2, 4, 8, 9 are SAFE as
+described. On surface 5 I additionally flag C-1 (the OTP gap the primary review
+did not note). On surface 6 I concur the count is server-side and that the
+active-or-later counting boundary is a deliberate anti-gaming choice.
+
+## Resolution of the addendum findings
+
+| ID | Severity | Status | Resolution |
+| --- | --- | --- | --- |
+| C-1 | Medium | **Fixed** | Attestation is now server-mediated. `attest_deal` is REVOKED from `authenticated` (only `service_role` executes it), takes an explicit `p_witness_user_id` and the real `p_otp_verified_at`, and rejects a witness who has already attested. `attestDealAction` verifies the OTP, then calls the RPC with the service-role client — so the OTP gate can no longer be bypassed by a witness calling the RPC directly, and `otp_verified_at` reflects a real verification. The in-RPC eligibility checks (invited, non-party, snapshot match) still run, so the elevated client cannot attest an ineligible person. |
+| C-2 | Low-Med | Accepted (mitigated) | The DB cannot recompute the rendered-HTML hash; only the service role can write to `contract-snapshots`, so a party can at most point `begin_witnessing` at an existing service-written snapshot for their own deal, never inject arbitrary HTML. Left as-is. |
+| C-3 | Low | Accepted (by design) | `get_financier_deal_count` intentionally allows a co-member to read another member's aggregate financier count — the customer must compute the counterparty financier's tripwire at deal creation. Aggregate counts only; no amounts or deal identities. |
+| C-4 | Low | **Fixed** | `acknowledge_tripwire` now records the alert against the deal's `financier_id` (the subject of the frequency tripwire, per §6) when a `deal_id` is supplied, while the `tripwire_acknowledged` event still records who actually acknowledged (`acknowledged_by`). |
+| C-5 | Low | **Fixed** | `create_deal` now inserts `arbitrator_name`/`arbitrator_contact`, so an arbitrator nominated in the wizard reaches the deal and the contract pack. |
+
+Note: the C-1 and C-4 SQL changes are structurally sound and the app builds
+and typechecks, but — as with the rest of the schema — they were not exercised
+against a live Postgres in this environment (Docker unavailable). A maintainer
+should confirm the witness ceremony end to end after `supabase start`.

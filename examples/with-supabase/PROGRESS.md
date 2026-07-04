@@ -27,6 +27,19 @@
   triggers + service-role-proof), state machine, witness integrity, tripwire,
   invitation/auth, money invariants, and contract-render escaping all verified
   sound. Full report: docs/SECURITY-REVIEW.md.
+- **A second independent review pass (addendum) added five findings; three
+  fixed, two accepted:**
+  - **C-1 (Medium, fixed):** attestation is now server-mediated —
+    `attest_deal` revoked from `authenticated`, takes the witness id + real
+    OTP timestamp, so a witness cannot bypass the OTP by calling the RPC
+    directly. Added an integration test for the denial.
+  - **C-4 (Low, fixed):** tripwire alert now attributed to the financier (the
+    subject of the wire) when tied to a deal; event records who acknowledged.
+  - **C-5 (Low, fixed):** `create_deal` now persists arbitrator nomination.
+  - **C-2 (Low-Med, accepted):** snapshot hash is client-supplied but only the
+    service role can write snapshot files (can't inject HTML).
+  - **C-3 (Low, accepted by design):** co-members can read aggregate financier
+    counts — required so the customer can compute the counterparty's tripwire.
 
 ## Integration status
 

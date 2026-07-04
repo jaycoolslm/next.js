@@ -192,6 +192,22 @@ describe.skipIf(!up)("RLS isolation (financial-promotion firewall)", () => {
     expect(error).toBeTruthy();
   });
 
+  it("an authenticated witness cannot call attest_deal directly (OTP gate is server-mediated)", async () => {
+    // C-1 fix: attest_deal is revoked from `authenticated`, so a witness who
+    // tries to bypass the server action's OTP check by calling the RPC with
+    // their own session is denied at the privilege level.
+    const witness = await signIn(WITNESS_1);
+    const { error } = await witness.rpc("attest_deal", {
+      p_deal_id: dealId,
+      p_witness_user_id: (await witness.auth.getUser()).data.user!.id,
+      p_typed_full_name: "Bypass Attempt",
+      p_snapshot_sha256: "0".repeat(64),
+      p_otp_verified_at: new Date().toISOString(),
+      p_user_agent: "test",
+    });
+    expect(error).toBeTruthy();
+  });
+
   it("a deal party cannot be added as a witness on their own deal", async () => {
     const service = serviceClient();
     const { data: deal } = await service

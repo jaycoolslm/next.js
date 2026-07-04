@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMail } from "@/lib/email";
 import { dealRef } from "@/lib/format";
 import type { ActionResult } from "./invitations";
@@ -68,11 +69,22 @@ export async function attestDealAction(
       return { ok: false, error: `Code verification failed: ${otpError.message}` };
     }
 
+    // OTP has now been verified for this witness in this request. Record the
+    // attestation with the SERVICE ROLE: attest_deal is not callable by
+    // `authenticated`, so this server action is the only path to an
+    // attestation, and the OTP gate above cannot be bypassed by a witness
+    // hitting the RPC directly. attest_deal still re-checks eligibility
+    // (invited, not a party, snapshot match), so the elevated client cannot
+    // attest an ineligible person.
+    const otpVerifiedAt = new Date().toISOString();
     const headerList = await headers();
-    const { data, error } = await supabase.rpc("attest_deal", {
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc("attest_deal", {
       p_deal_id: dealId,
+      p_witness_user_id: user.id,
       p_typed_full_name: typedFullName.trim(),
       p_snapshot_sha256: snapshotSha256,
+      p_otp_verified_at: otpVerifiedAt,
       p_user_agent: headerList.get("user-agent") ?? null,
     });
     if (error) return { ok: false, error: error.message };

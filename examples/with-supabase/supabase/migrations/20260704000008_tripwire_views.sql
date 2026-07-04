@@ -33,18 +33,28 @@ set search_path = public, extensions
 as $$
 declare
   v_uid uuid := auth.uid();
+  v_subject uuid;
 begin
   if v_uid is null then raise exception 'not authenticated'; end if;
   if not public.is_org_member(p_org_id) then
     raise exception 'caller is not a member of this organization';
   end if;
 
+  -- The frequency tripwire is about the FINANCIER's activity (§6), so the
+  -- alert is recorded against the financier even when the customer creates the
+  -- deal. The deal event still records who actually acknowledged (v_uid).
+  v_subject := v_uid;
+  if p_deal_id is not null then
+    select financier_id into v_subject from public.deals where id = p_deal_id;
+    v_subject := coalesce(v_subject, v_uid);
+  end if;
+
   insert into public.tripwire_alerts (user_id, org_id, deal_id, level, message, acknowledged_at)
-  values (v_uid, p_org_id, p_deal_id, p_level, p_message, now());
+  values (v_subject, p_org_id, p_deal_id, p_level, p_message, now());
 
   if p_deal_id is not null then
     perform public.append_deal_event(p_deal_id, v_uid, 'tripwire_acknowledged',
-      jsonb_build_object('level', p_level, 'message', p_message));
+      jsonb_build_object('level', p_level, 'message', p_message, 'acknowledged_by', v_uid));
   end if;
 end;
 $$;

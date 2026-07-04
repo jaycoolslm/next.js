@@ -62,14 +62,16 @@ begin
     org_id, type, status, financier_id, customer_id, created_by, currency,
     asset_description, supplier_name, cost_price_pence, markup_pence, principal_pence,
     instalment_count, instalment_amount_pence, first_due_date, frequency,
-    borrower_entity_type, purpose, regulatory_status, routing_notes
+    borrower_entity_type, purpose, regulatory_status, routing_notes,
+    arbitrator_name, arbitrator_contact
   ) values (
     v_org, v_type, 'draft', v_financier, v_customer, v_uid, coalesce(p->>'currency','GBP'),
     p->>'asset_description', p->>'supplier_name',
     (p->>'cost_price_pence')::bigint, (p->>'markup_pence')::bigint, (p->>'principal_pence')::bigint,
     (p->>'instalment_count')::int, (p->>'instalment_amount_pence')::bigint,
     (p->>'first_due_date')::date, p->>'frequency',
-    p->>'borrower_entity_type', p->>'purpose', p->>'regulatory_status', p->>'routing_notes'
+    p->>'borrower_entity_type', p->>'purpose', p->>'regulatory_status', p->>'routing_notes',
+    p->>'arbitrator_name', p->>'arbitrator_contact'
   ) returning id into v_deal_id;
 
   perform public.append_deal_event(v_deal_id, v_uid, 'deal_created',
@@ -170,10 +172,21 @@ $$;
 
 -- attest_deal(deal_id, typed_full_name, snapshot_sha256, user_agent) -> jsonb
 -- The witness ceremony (spec §7). The 2nd attestation auto-activates the deal.
+-- Server-mediated attestation. The 6-digit email OTP is a Supabase-auth
+-- concept the database cannot verify, so it is checked in the Next.js server
+-- action (attestDealAction -> supabase.auth.verifyOtp) which then calls this
+-- with the SERVICE ROLE, passing the witness's id and the real verification
+-- time. Execute is REVOKED from `authenticated` (see grants.sql), so an invited
+-- witness cannot call this RPC directly to bypass the OTP and self-stamp
+-- otp_verified_at. The eligibility checks below still run, so even the trusted
+-- server cannot attest an ineligible person (a party, or a non-invited member).
+drop function if exists public.attest_deal(uuid, text, text, text);
 create or replace function public.attest_deal(
   p_deal_id uuid,
+  p_witness_user_id uuid,
   p_typed_full_name text,
   p_snapshot_sha256 text,
+  p_otp_verified_at timestamptz,
   p_user_agent text
 )
 returns jsonb
@@ -183,23 +196,28 @@ set search_path = public, extensions
 as $$
 declare
   d public.deals;
-  v_uid uuid := auth.uid();
+  v_witness uuid := p_witness_user_id;
   v_recorded_sha text;
   v_attested int;
   v_new_status text;
 begin
-  if v_uid is null then raise exception 'not authenticated'; end if;
+  if v_witness is null then raise exception 'witness id is required'; end if;
+  if p_otp_verified_at is null then raise exception 'otp verification time is required'; end if;
   select * into d from public.deals where id = p_deal_id for update;
   if not found then raise exception 'deal % not found', p_deal_id; end if;
   if d.status <> 'witnessing' then
     raise exception 'attestation is only possible while the deal is witnessing (got %)', d.status;
   end if;
   -- Defence in depth: a party can never attest, even if somehow recorded as a witness.
-  if v_uid in (d.financier_id, d.customer_id) then
+  if v_witness in (d.financier_id, d.customer_id) then
     raise exception 'a party to the deal cannot attest as a witness';
   end if;
-  if not exists (select 1 from public.deal_witnesses where deal_id = d.id and user_id = v_uid) then
+  if not exists (select 1 from public.deal_witnesses where deal_id = d.id and user_id = v_witness) then
     raise exception 'only an invited witness may attest';
+  end if;
+  -- A witness attests at most once (the second slot must be a different person).
+  if exists (select 1 from public.attestations where deal_id = d.id and witness_user_id = v_witness) then
+    raise exception 'this witness has already attested';
   end if;
 
   -- The sha the witness signs must match the recorded contract snapshot.
@@ -216,12 +234,12 @@ begin
   end if;
 
   insert into public.attestations (deal_id, witness_user_id, typed_full_name, otp_verified_at, contract_snapshot_sha256, user_agent)
-  values (d.id, v_uid, p_typed_full_name, now(), p_snapshot_sha256, p_user_agent);
+  values (d.id, v_witness, p_typed_full_name, p_otp_verified_at, p_snapshot_sha256, p_user_agent);
 
   update public.deal_witnesses set status = 'attested'
-  where deal_id = d.id and user_id = v_uid;
+  where deal_id = d.id and user_id = v_witness;
 
-  perform public.append_deal_event(d.id, v_uid, 'witness_attested',
+  perform public.append_deal_event(d.id, v_witness, 'witness_attested',
     jsonb_build_object('typed_full_name', p_typed_full_name, 'snapshot_sha256', p_snapshot_sha256));
 
   select count(*) into v_attested from public.attestations where deal_id = d.id;
@@ -232,7 +250,7 @@ begin
     update public.deals set status = 'active' where id = d.id;
     perform set_config('app.allow_status_change', 'off', true);
     v_new_status := 'active';
-    perform public.append_deal_event(d.id, v_uid, 'deal_activated',
+    perform public.append_deal_event(d.id, v_witness, 'deal_activated',
       jsonb_build_object('attestation_count', v_attested));
   end if;
 

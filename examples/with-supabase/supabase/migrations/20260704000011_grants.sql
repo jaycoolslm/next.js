@@ -50,7 +50,10 @@ grant execute on function
   public.create_deal(jsonb),
   public.add_deal_document(uuid, text, text, text),
   public.add_deal_witness(uuid, uuid),
-  public.attest_deal(uuid, text, text, text),
+  -- attest_deal is intentionally NOT granted to authenticated: attestation is
+  -- server-mediated so the OTP check in attestDealAction cannot be bypassed by
+  -- an invited witness calling the RPC directly. Only service_role executes it
+  -- (via the blanket service_role grant below).
   public.record_repayment(uuid, bigint, date, text),
   public.confirm_repayment(uuid),
   public.get_deal_event_chain(uuid),
