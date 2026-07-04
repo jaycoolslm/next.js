@@ -1,7 +1,8 @@
+import { Suspense } from "react";
+import { PageLoading } from "@/components/page-loading";
 import { AppNav } from "@/components/app-nav";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -9,7 +10,7 @@ import {
 import { DealWizard } from "@/components/deals/deal-wizard";
 import { getActiveOrg } from "@/lib/org";
 
-export default async function NewDealPage() {
+async function NewDealPage() {
   const org = await getActiveOrg();
 
   if (!org) {
@@ -42,5 +43,14 @@ export default async function NewDealPage() {
         <DealWizard orgId={org.id} />
       </div>
     </>
+  );
+}
+
+// cacheComponents requires uncached data access (cookies/auth) behind Suspense.
+export default function NewDealPageWrapper() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <NewDealPage />
+    </Suspense>
   );
 }

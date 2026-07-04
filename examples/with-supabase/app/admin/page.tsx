@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { PageLoading } from "@/components/page-loading";
 import {
   Card,
   CardContent,
@@ -48,7 +50,7 @@ function humanise(value: string): string {
   return value.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
-export default async function GovernancePage() {
+async function GovernancePage() {
   const activeOrg = await getActiveOrg();
   if (!activeOrg) return null;
 
@@ -214,4 +216,13 @@ function alertVariant(level: TripwireLevel): "warning" | "destructive" | "defaul
   if (level === "red") return "destructive";
   if (level === "amber") return "warning";
   return "default";
+}
+
+// cacheComponents requires uncached data access (cookies/auth) behind Suspense.
+export default function GovernancePageWrapper() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <GovernancePage />
+    </Suspense>
+  );
 }

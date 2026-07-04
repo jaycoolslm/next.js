@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { PageLoading } from "@/components/page-loading";
 import Link from "next/link";
 import { AppNav } from "@/components/app-nav";
 import {
@@ -17,7 +19,7 @@ const adminLinks = [
   { href: "/admin/settings", label: "Settings" },
 ];
 
-export default async function AdminLayout({
+async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -75,5 +77,16 @@ export default async function AdminLayout({
         </div>
       </div>
     </main>
+  );
+}
+
+// cacheComponents requires uncached data access (cookies/auth) behind Suspense.
+export default function AdminLayoutWrapper(
+  props: Parameters<typeof AdminLayout>[0],
+) {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <AdminLayout {...props} />
+    </Suspense>
   );
 }

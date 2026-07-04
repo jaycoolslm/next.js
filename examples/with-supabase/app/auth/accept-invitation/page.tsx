@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { PageLoading } from "@/components/page-loading";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { validateInvitationAction } from "@/app/actions/invitations";
 import { AcceptInvitationForm } from "@/components/accept-invitation-form";
 
-export default async function AcceptInvitationPage({
+async function AcceptInvitationPage({
   searchParams,
 }: {
   searchParams: Promise<{ token?: string }>;
@@ -74,5 +76,16 @@ function InvalidCard({ message }: { message: string }) {
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+// cacheComponents requires uncached data access (cookies/auth) behind Suspense.
+export default function AcceptInvitationPageWrapper(
+  props: Parameters<typeof AcceptInvitationPage>[0],
+) {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <AcceptInvitationPage {...props} />
+    </Suspense>
   );
 }

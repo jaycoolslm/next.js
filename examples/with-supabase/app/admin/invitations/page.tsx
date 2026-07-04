@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { PageLoading } from "@/components/page-loading";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -37,7 +39,7 @@ const STATUS_LABEL: Record<InvitationStatus, string> = {
   expired: "Expired",
 };
 
-export default async function InvitationsPage() {
+async function InvitationsPage() {
   const activeOrg = await getActiveOrg();
   if (!activeOrg) return null;
 
@@ -105,5 +107,14 @@ export default async function InvitationsPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+// cacheComponents requires uncached data access (cookies/auth) behind Suspense.
+export default function InvitationsPageWrapper() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <InvitationsPage />
+    </Suspense>
   );
 }

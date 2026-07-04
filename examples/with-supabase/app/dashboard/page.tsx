@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { PageLoading } from "@/components/page-loading";
 import Link from "next/link";
 import { AppNav } from "@/components/app-nav";
 import {
@@ -40,7 +42,7 @@ const TRIPWIRE_VARIANT: Record<TripwireLevel, "warning" | "destructive"> = {
   qard_info: "warning",
 };
 
-export default async function DashboardPage() {
+async function DashboardPage() {
   const org = await getActiveOrg();
 
   if (!org) {
@@ -146,7 +148,7 @@ export default async function DashboardPage() {
                   <TableRow>
                     <TableHead>Reference</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Counterparty</TableHead>
+                    <TableHead>Parties</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Action</TableHead>
@@ -158,7 +160,9 @@ export default async function DashboardPage() {
                       <TableCell className="font-mono text-xs">
                         {dealRef(deal.id)}
                       </TableCell>
-                      <TableCell>{TYPE_LABELS[deal.type] ?? deal.type}</TableCell>
+                      <TableCell>
+                        {TYPE_LABELS[deal.type] ?? deal.type}
+                      </TableCell>
                       <TableCell>
                         {deal.financier_id === deal.customer_id
                           ? "—"
@@ -212,7 +216,9 @@ export default async function DashboardPage() {
                       <TableCell className="font-mono text-xs">
                         {dealRef(deal.id)}
                       </TableCell>
-                      <TableCell>{TYPE_LABELS[deal.type] ?? deal.type}</TableCell>
+                      <TableCell>
+                        {TYPE_LABELS[deal.type] ?? deal.type}
+                      </TableCell>
                       <TableCell>
                         {deal.financier_name} / {deal.customer_name}
                       </TableCell>
@@ -247,5 +253,14 @@ export default async function DashboardPage() {
         </Card>
       </div>
     </>
+  );
+}
+
+// cacheComponents requires uncached data access (cookies/auth) behind Suspense.
+export default function DashboardPageWrapper() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <DashboardPage />
+    </Suspense>
   );
 }

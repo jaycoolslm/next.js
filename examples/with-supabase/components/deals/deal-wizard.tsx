@@ -14,11 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -152,7 +148,8 @@ export function DealWizard({ orgId }: { orgId: string }) {
         }
         return (state.principalPence ?? 0) > 0;
       case 4: {
-        const count = state.frequency === "lump_sum" ? 1 : state.instalmentCount;
+        const count =
+          state.frequency === "lump_sum" ? 1 : state.instalmentCount;
         return (
           count >= 1 &&
           (state.instalmentAmountPence ?? 0) > 0 &&
@@ -287,15 +284,10 @@ export function DealWizard({ orgId }: { orgId: string }) {
                 id="myRole"
                 value={state.myRole}
                 onChange={(event) =>
-                  update(
-                    "myRole",
-                    event.target.value as WizardState["myRole"],
-                  )
+                  update("myRole", event.target.value as WizardState["myRole"])
                 }
               >
-                <option value="financier">
-                  I am the {financierWord}
-                </option>
+                <option value="financier">I am the {financierWord}</option>
                 <option value="customer">I am the {customerWord}</option>
               </Select>
             </div>
@@ -497,9 +489,7 @@ export function DealWizard({ orgId }: { orgId: string }) {
                 id="firstDueDate"
                 type="date"
                 value={state.firstDueDate}
-                onChange={(event) =>
-                  update("firstDueDate", event.target.value)
-                }
+                onChange={(event) => update("firstDueDate", event.target.value)}
               />
               {state.firstDueDate && !isFutureDate(state.firstDueDate) && (
                 <p className="text-sm text-destructive">
@@ -672,7 +662,8 @@ export function DealWizard({ orgId }: { orgId: string }) {
           open={showTripwire}
           onOpenChange={(open) => {
             // Blocking: only allow closing once acknowledged.
-            if (!open && tripwireAck === preview.tripwire) setShowTripwire(false);
+            if (!open && tripwireAck === preview.tripwire)
+              setShowTripwire(false);
           }}
         >
           <DialogContent hideClose>

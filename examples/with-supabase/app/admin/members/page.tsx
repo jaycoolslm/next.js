@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { PageLoading } from "@/components/page-loading";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,7 +21,7 @@ interface MemberRow {
   email: string | null;
 }
 
-export default async function MembersPage() {
+async function MembersPage() {
   const activeOrg = await getActiveOrg();
   if (!activeOrg) return null;
 
@@ -105,5 +107,14 @@ export default async function MembersPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// cacheComponents requires uncached data access (cookies/auth) behind Suspense.
+export default function MembersPageWrapper() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <MembersPage />
+    </Suspense>
   );
 }

@@ -32,7 +32,8 @@ export function Timeline({
               key={step}
               className={cn(
                 "rounded-md border px-2.5 py-1 text-xs font-medium",
-                isCurrent && "border-primary bg-primary text-primary-foreground",
+                isCurrent &&
+                  "border-primary bg-primary text-primary-foreground",
                 isDone && "border-transparent bg-muted text-muted-foreground",
                 !isCurrent && !isDone && "border-dashed text-muted-foreground",
               )}

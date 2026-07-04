@@ -54,7 +54,8 @@ const TITLES: Record<DealStatus, string> = {
   offered: "The lender has offered the terms of the benevolent loan.",
   accepted: "The borrower has accepted the terms of the benevolent loan.",
   witnessing: lifecycle.witnessing.body,
-  active: "The agreement is witnessed and in effect; repayments are recorded here.",
+  active:
+    "The agreement is witnessed and in effect; repayments are recorded here.",
   settled: lifecycle.statuses.settled.description,
   defaulted: lifecycle.statuses.defaulted.description,
   disputed: lifecycle.dispute.body,
@@ -70,7 +71,11 @@ export function StatusBadge({
   className?: string;
 }) {
   return (
-    <Badge variant={VARIANTS[status]} className={className} title={TITLES[status]}>
+    <Badge
+      variant={VARIANTS[status]}
+      className={className}
+      title={TITLES[status]}
+    >
       {LABELS[status]}
     </Badge>
   );

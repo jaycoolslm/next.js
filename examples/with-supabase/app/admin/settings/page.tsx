@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { PageLoading } from "@/components/page-loading";
 import {
   Card,
   CardContent,
@@ -7,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { getActiveOrg } from "@/lib/org";
 
-export default async function SettingsPage() {
+async function SettingsPage() {
   const activeOrg = await getActiveOrg();
   if (!activeOrg) return null;
 
@@ -42,5 +44,14 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// cacheComponents requires uncached data access (cookies/auth) behind Suspense.
+export default function SettingsPageWrapper() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <SettingsPage />
+    </Suspense>
   );
 }
