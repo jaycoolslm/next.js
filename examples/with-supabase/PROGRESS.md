@@ -4,15 +4,15 @@
 
 | Phase | Description | Status |
 | ----- | ----------- | ------ |
-| 0 | Bootstrap: install, supabase init, env wiring | in progress |
-| 1 | Migrations (Subagent A) + RLS/hash-chain tests | delegated |
-| 2 | Invitations + orgs + roles UI | pending |
-| 3 | Deal wizard, advance_deal, routing + tripwire | pending |
-| 4 | Witness ceremony + snapshotting + attestations | pending |
-| 5 | Repayments + settlement + dashboard | pending |
-| 6 | Contract pack + content (Subagent B) | delegated (content) |
+| 0 | Bootstrap: install, supabase init, env wiring | done |
+| 1 | Migrations (Subagent A) + RLS/hash-chain tests | in progress (A running; tests written) |
+| 2 | Invitations + orgs + roles UI | in progress (Subagent D) |
+| 3 | Deal wizard, advance_deal, routing + tripwire | in progress (routing lib + actions done; wizard UI with Subagent E) |
+| 4 | Witness ceremony + snapshotting + attestations | in progress (actions + snapshot done; ceremony UI with Subagent E) |
+| 5 | Repayments + settlement + dashboard | in progress (actions/queries done; UI with Subagent E) |
+| 6 | Contract pack + content (Subagent B) | content done; renderer + route done |
 | 7 | Adversarial review (Subagent C) | pending |
-| 8 | README / ARCHITECTURE rewrite, final PROGRESS | pending |
+| 8 | README / ARCHITECTURE rewrite, final PROGRESS | drafted |
 
 ## Decisions
 
