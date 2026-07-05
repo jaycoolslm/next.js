@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase/server";
-import { getActiveOrg } from "@/lib/org";
+import { requireOrgAdmin } from "@/lib/org";
 import type { OrgRole } from "@/lib/types";
 
 interface MemberRow {
@@ -22,8 +22,7 @@ interface MemberRow {
 }
 
 async function MembersPage() {
-  const activeOrg = await getActiveOrg();
-  if (!activeOrg) return null;
+  const activeOrg = await requireOrgAdmin();
 
   const supabase = await createClient();
 

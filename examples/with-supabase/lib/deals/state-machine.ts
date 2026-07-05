@@ -120,6 +120,38 @@ export function isActionAllowed(
   return availableActions(type, status, role).includes(action);
 }
 
+/**
+ * Lifecycle-advancing actions in the order they should be surfaced as the one
+ * "primary" next step in the guided view. Management actions (settle, dispute,
+ * arbitration, default, ibra', cancel) are deliberately excluded — they are
+ * offered as secondary controls, never as the single hero call-to-action.
+ */
+export const HERO_ACTION_ORDER: DealAction[] = [
+  "record_promise",
+  "record_purchase",
+  "offer_sale",
+  "accept_sale",
+  "offer_terms",
+  "accept_terms",
+  "begin_witnessing",
+];
+
+/**
+ * The single lifecycle-advancing action a role should take now, or null when
+ * it is not their turn (waiting on the other party, deal active/terminal, etc.).
+ */
+export function primaryAction(
+  type: DealType,
+  status: DealStatus,
+  role?: ActorRole,
+): DealAction | null {
+  const available = availableActions(type, status, role);
+  for (const action of HERO_ACTION_ORDER) {
+    if (available.includes(action)) return action;
+  }
+  return null;
+}
+
 /** Ordered status sequence used to render the deal timeline. */
 export function lifecycleFor(type: DealType): DealStatus[] {
   return type === "murabaha"

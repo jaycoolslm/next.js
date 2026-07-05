@@ -32,7 +32,9 @@ without triggering RLS recursion.
 | `is_org_admin(org_id)` | `auth.uid()` is an **admin** of the org. |
 | `is_deal_party(deal_id)` | `auth.uid()` is the financier **or** customer. |
 | `is_deal_participant(deal_id)` | `auth.uid()` is a party **or** a witness (any status). |
-| `shares_org_with(user_id)` | caller and `user_id` share at least one org. |
+| `shares_org_with(user_id)` | caller and `user_id` share at least one org. (Used by `get_financier_deal_count`, not by the profiles policy.) |
+| `shares_deal_with(user_id)` | caller and `user_id` are both a party or witness of the same deal. |
+| `admins_org_of(user_id)` | caller is an **admin** of an org that `user_id` belongs to. |
 
 ## Table policies
 
@@ -49,9 +51,14 @@ RLS is enabled on every table below. Unless stated, there is **no**
   `accept_invitation()`.
 
 ### `profiles`
-- **SELECT**: your own row, **or** `shares_org_with(user_id)` — you can see the
-  name and email of anyone in one of your orgs (needed to display party/witness
-  names and to look counterparties up by email).
+- **SELECT**: your own row, **or** `shares_deal_with(user_id)` (you share a deal
+  with that person, so their name/email can be shown on the deal page), **or**
+  `admins_org_of(user_id)` (you are an admin of one of their orgs). Being a mere
+  co-member of the same org is **not** enough — there is no browsable roster of
+  member names/emails for non-admins.
+  - Counterparty lookup during deal creation and the governance deal list do not
+    go through this policy: they use the `SECURITY DEFINER` RPCs
+    `find_org_member_by_email()` and `get_governance_deals()`.
 - **INSERT**: only your own row (`user_id = auth.uid()`).
 - **UPDATE**: only your own row.
 - Rows are normally created automatically by the `handle_new_user` trigger,

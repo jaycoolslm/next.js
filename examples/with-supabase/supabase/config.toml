@@ -223,7 +223,7 @@ web3 = 30
 [auth.email]
 # Allow/disallow new user signups via email to your project.
 # Invite-only: see note on [auth].enable_signup above.
-enable_signup = false
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
@@ -252,6 +252,17 @@ otp_expiry = 3600
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
+
+# The witness attestation ceremony calls supabase.auth.signInWithOtp({ email })
+# for an already-signed-in witness. For an existing user that request sends
+# GoTrue's "magic_link" email. The default magic_link template renders
+# {{ .ConfirmationURL }}, i.e. a one-click sign-in link — which is wrong for the
+# ceremony (we need the witness to type a code). This override renders the
+# 6-digit {{ .Token }} instead, so signInWithOtp emails a numeric code that the
+# witness page verifies with verifyOtp({ type: "email" }). See app/actions/witness.ts.
+[auth.email.template.magic_link]
+subject = "Your 282 attestation code"
+content_path = "./supabase/templates/magic_link.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

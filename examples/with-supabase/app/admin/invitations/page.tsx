@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase/server";
-import { getActiveOrg } from "@/lib/org";
+import { requireOrgAdmin } from "@/lib/org";
 import { formatDate } from "@/lib/format";
 import { CreateInvitationForm } from "@/components/create-invitation-form";
 import type { Invitation } from "@/lib/types";
@@ -40,8 +40,7 @@ const STATUS_LABEL: Record<InvitationStatus, string> = {
 };
 
 async function InvitationsPage() {
-  const activeOrg = await getActiveOrg();
-  if (!activeOrg) return null;
+  const activeOrg = await requireOrgAdmin();
 
   const supabase = await createClient();
   const { data } = await supabase

@@ -16,13 +16,15 @@ import {
 } from "@/components/ui/dialog";
 import { MoneyInput } from "@/components/deals/money-input";
 import { advanceDealAction } from "@/app/actions/deals";
-import { availableActions } from "@/lib/deals/state-machine";
+import { availableActions, primaryAction } from "@/lib/deals/state-machine";
 import type { DealAction } from "@/lib/deals/state-machine";
-import { dealLifecycle } from "@/content/deal-lifecycle";
+import { dealLifecycle, guidedLifecycle } from "@/content/deal-lifecycle";
 import { formatPence } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { DealStatus, DealType } from "@/lib/types";
 
 const lifecycle = dealLifecycle["en-GB"];
+const guided = guidedLifecycle["en-GB"];
 
 interface ActionMeta {
   label: string;
@@ -113,6 +115,7 @@ export function DealActions({
   hasReceipt,
   settledPence,
   receivablePence,
+  layout = "list",
 }: {
   dealId: string;
   type: DealType;
@@ -121,6 +124,8 @@ export function DealActions({
   hasReceipt: boolean;
   settledPence: number;
   receivablePence: number;
+  /** "guided" surfaces one primary CTA with secondary controls beneath. */
+  layout?: "list" | "guided";
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState<DealAction | null>(null);
@@ -191,34 +196,50 @@ export function DealActions({
     });
   }
 
+  function openDialog(action: DealAction) {
+    setError(null);
+    setOpen(action);
+  }
+
+  const primary =
+    layout === "guided"
+      ? primaryAction(type, status, viewerRole)
+      : null;
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2">
-        {actions.map((action) => {
-          const meta = META[action];
-          const disabledReason = isDisabled(action);
-          return (
-            <div key={action} className="flex flex-col gap-1">
-              <Button
-                type="button"
-                variant={meta.destructive ? "destructive" : "default"}
-                disabled={Boolean(disabledReason)}
-                onClick={() => {
-                  setError(null);
-                  setOpen(action);
-                }}
-              >
-                {meta.label}
-              </Button>
-              {disabledReason && (
-                <span className="max-w-xs text-xs text-muted-foreground">
-                  {disabledReason}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {layout === "guided" ? (
+        <GuidedTriggers
+          actions={actions}
+          primary={primary}
+          isDisabled={isDisabled}
+          onOpen={openDialog}
+        />
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {actions.map((action) => {
+            const meta = META[action];
+            const disabledReason = isDisabled(action);
+            return (
+              <div key={action} className="flex flex-col gap-1">
+                <Button
+                  type="button"
+                  variant={meta.destructive ? "destructive" : "default"}
+                  disabled={Boolean(disabledReason)}
+                  onClick={() => openDialog(action)}
+                >
+                  {meta.label}
+                </Button>
+                {disabledReason && (
+                  <span className="max-w-xs text-xs text-muted-foreground">
+                    {disabledReason}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <Dialog
         open={open !== null}
@@ -300,6 +321,87 @@ export function DealActions({
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/** Guided layout: one primary CTA, cancel as a quiet link, rest as outlines. */
+function GuidedTriggers({
+  actions,
+  primary,
+  isDisabled,
+  onOpen,
+}: {
+  actions: DealAction[];
+  primary: DealAction | null;
+  isDisabled: (action: DealAction) => string | null;
+  onOpen: (action: DealAction) => void;
+}) {
+  const rest = actions.filter((action) => action !== primary);
+  const hasCancel = rest.includes("cancel");
+  const manage = rest.filter((action) => action !== "cancel");
+  const primaryDisabled = primary ? isDisabled(primary) : null;
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      {primary && (
+        <div className="flex w-full flex-col items-center gap-1.5">
+          <Button
+            type="button"
+            size="lg"
+            disabled={Boolean(primaryDisabled)}
+            onClick={() => onOpen(primary)}
+            className="w-full bg-emerald-600 text-base font-semibold text-white shadow-md hover:bg-emerald-700 focus-visible:ring-emerald-600 sm:w-auto sm:min-w-64"
+          >
+            {guided.actions[primary]?.headline ?? META[primary].label}
+            <span aria-hidden> →</span>
+          </Button>
+          {primaryDisabled && (
+            <span className="max-w-sm text-center text-xs text-muted-foreground">
+              {primaryDisabled}
+            </span>
+          )}
+        </div>
+      )}
+
+      {manage.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-2">
+          {manage.map((action) => {
+            const disabledReason = isDisabled(action);
+            return (
+              <div key={action} className="flex flex-col items-center gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={META[action].destructive ? "destructive" : "outline"}
+                  disabled={Boolean(disabledReason)}
+                  onClick={() => onOpen(action)}
+                >
+                  {META[action].label}
+                </Button>
+                {disabledReason && (
+                  <span className="max-w-xs text-center text-[11px] text-muted-foreground">
+                    {disabledReason}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {hasCancel && (
+        <button
+          type="button"
+          onClick={() => onOpen("cancel")}
+          className={cn(
+            "text-sm text-muted-foreground underline underline-offset-2",
+            "hover:text-foreground",
+          )}
+        >
+          {primary ? "Not ready? Cancel this deal" : "Cancel this deal"}
+        </button>
+      )}
     </div>
   );
 }

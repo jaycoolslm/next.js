@@ -7,11 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getActiveOrg } from "@/lib/org";
+import { requireOrgAdmin } from "@/lib/org";
 
 async function SettingsPage() {
-  const activeOrg = await getActiveOrg();
-  if (!activeOrg) return null;
+  const activeOrg = await requireOrgAdmin();
 
   return (
     <div className="flex flex-col gap-4">

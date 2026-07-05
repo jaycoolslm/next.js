@@ -224,6 +224,87 @@ describe.skipIf(!up)("RLS isolation (financial-promotion firewall)", () => {
   });
 });
 
+describe.skipIf(!up)("profile PII isolation (no member directory)", () => {
+  // Regression test for the PII-leak defect: a member of an org must NOT be able
+  // to read the full_name/email of a co-member they share no deal with. They may
+  // still read (a) their own profile, and — as parties of the seeded deal — (b)
+  // each other's profile, so deal pages keep rendering counterparty names.
+  let orgId: string;
+  let financierUserId: string;
+  let customerUserId: string;
+  let coMember: SupabaseClient;
+  let coMemberEmail: string;
+
+  beforeAll(async () => {
+    const service = serviceClient();
+
+    const { data: org, error: orgError } = await service
+      .from("organizations")
+      .select("id")
+      .limit(1)
+      .single();
+    if (orgError) throw new Error(`seeded org not found: ${orgError.message}`);
+    orgId = org.id;
+
+    const { data: deal, error: dealError } = await service
+      .from("deals")
+      .select("financier_id, customer_id")
+      .eq("type", "murabaha")
+      .limit(1)
+      .single();
+    if (dealError) throw new Error(`seeded deal not found: ${dealError.message}`);
+    financierUserId = deal.financier_id;
+    customerUserId = deal.customer_id;
+
+    // A brand-new member of the SAME org who is a party/witness of no deal.
+    coMemberEmail = `comember-${Date.now()}@demo.test`;
+    const { data: created, error: createError } =
+      await service.auth.admin.createUser({
+        email: coMemberEmail,
+        password: PASSWORD,
+        email_confirm: true,
+        user_metadata: { full_name: "Co Member" },
+      });
+    if (createError) throw new Error(createError.message);
+    const { error: memberError } = await service
+      .from("org_members")
+      .insert({ org_id: orgId, user_id: created.user!.id, role: "member" });
+    if (memberError) throw new Error(memberError.message);
+    coMember = await signIn(coMemberEmail);
+  }, 30_000);
+
+  it("a same-org member who shares no deal CANNOT read another member's PII", async () => {
+    const { data } = await coMember
+      .from("profiles")
+      .select("user_id, full_name, email")
+      .in("user_id", [financierUserId, customerUserId]);
+    expect(data ?? []).toHaveLength(0);
+  });
+
+  it("a member can still read their own profile", async () => {
+    const {
+      data: { user },
+    } = await coMember.auth.getUser();
+    const { data } = await coMember
+      .from("profiles")
+      .select("email")
+      .eq("user_id", user!.id);
+    expect(data).toHaveLength(1);
+    expect(data![0].email).toBe(coMemberEmail);
+  });
+
+  it("deal parties CAN still read each other's PII (deal display not broken)", async () => {
+    const financier = await signIn(FINANCIER);
+    const { data } = await financier
+      .from("profiles")
+      .select("user_id, full_name, email")
+      .eq("user_id", customerUserId);
+    expect(data).toHaveLength(1);
+    expect(data![0].full_name).toBeTruthy();
+    expect(data![0].email).toBeTruthy();
+  });
+});
+
 describe.skipIf(!up)("hash-chained append-only event log", () => {
   let dealId: string;
 

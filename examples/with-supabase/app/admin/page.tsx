@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { createClient } from "@/lib/supabase/server";
-import { getActiveOrg } from "@/lib/org";
+import { requireOrgAdmin } from "@/lib/org";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { STANDARD_DISCLAIMER } from "@/content/disclaimers";
 import type {
@@ -51,8 +51,7 @@ function humanise(value: string): string {
 }
 
 async function GovernancePage() {
-  const activeOrg = await getActiveOrg();
-  if (!activeOrg) return null;
+  const activeOrg = await requireOrgAdmin();
 
   const supabase = await createClient();
 
